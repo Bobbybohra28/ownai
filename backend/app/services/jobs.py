@@ -26,7 +26,9 @@ STREAM = "ownai:jobs"
 GROUP = "ownai-workers"
 DEAD_LETTER = "ownai:jobs:dead"
 MAX_DELIVERIES = 3
-CLAIM_IDLE_MS = 15 * 60 * 1000
+# A job is considered abandoned (worker crashed) when it has not been heartbeated for this long.
+CLAIM_IDLE_MS = 5 * 60 * 1000
+HEARTBEAT_S = 30.0
 
 
 def _text(value: Any) -> str:
@@ -101,14 +103,28 @@ class RedisStreamQueue(JobQueue):
         eid = _text(entry_id)
         job_type = _text(fields.get(b"type") or fields.get("type") or "")
         payload = json.loads(_text(fields.get(b"payload") or fields.get("payload") or "{}"))
+        heartbeat = asyncio.create_task(self._heartbeat(eid))
         try:
             await self._dispatch(job_type, payload, eid)
         except Exception:
             log.exception("jobs.failed", job_type=job_type, job_id=eid)
         finally:
+            heartbeat.cancel()
             await self.redis.xack(STREAM, GROUP, eid)
 
-    async def _reclaim(self) -> None:
+    async def _heartbeat(self, eid: str) -> None:
+        """Keep a running job's idle time low so other workers never reclaim it while it is still running.
+
+        XCLAIM ... JUSTID by the owning consumer resets the idle time without counting another delivery.
+        """
+        while True:
+            await asyncio.sleep(HEARTBEAT_S)
+            try:
+                await self.redis.xclaim(STREAM, GROUP, self.consumer, min_idle_time=0, message_ids=[eid], justid=True)
+            except Exception as exc:  # a missed beat only risks an early reclaim; keep trying
+                log.warning("jobs.heartbeat_failed", job_id=eid, error=str(exc))
+
+    async def _reclaim(self, spawn: Callable[[Any, dict[Any, Any]], None]) -> None:
         """Re-deliver jobs from crashed workers; dead-letter jobs that keep failing."""
         try:
             pending = await self.redis.xpending_range(STREAM, GROUP, min="-", max="+", count=50)
@@ -128,8 +144,8 @@ class RedisStreamQueue(JobQueue):
                 continue
             claimed = await self.redis.xclaim(STREAM, GROUP, self.consumer, min_idle_time=CLAIM_IDLE_MS, message_ids=[eid])
             for entry_id, fields in claimed:
-                log.warning("jobs.reclaimed", job_id=str(entry_id))
-                await self._handle(entry_id, fields)
+                log.warning("jobs.reclaimed", job_id=_text(entry_id))
+                spawn(entry_id, fields)
 
     async def consume(self, *, concurrency: int = 2, stop: asyncio.Event | None = None) -> None:
         await self.ensure_group()
@@ -137,12 +153,26 @@ class RedisStreamQueue(JobQueue):
         running: set[asyncio.Task[None]] = set()
         stop = stop or asyncio.Event()
         last_reclaim = 0.0
+
+        def spawn(eid: Any, fields: dict[Any, Any], *, acquired: bool = False) -> None:
+            async def run() -> None:
+                if not acquired:
+                    await semaphore.acquire()
+                try:
+                    await self._handle(eid, fields)
+                finally:
+                    semaphore.release()
+
+            task = asyncio.create_task(run())
+            running.add(task)
+            task.add_done_callback(running.discard)
+
         log.info("worker.started", consumer=self.consumer, concurrency=concurrency)
         while not stop.is_set():
             loop_time = asyncio.get_running_loop().time()
             if loop_time - last_reclaim > 60:
                 last_reclaim = loop_time
-                await self._reclaim()
+                await self._reclaim(spawn)
             await semaphore.acquire()
             try:
                 result = await self.redis.xreadgroup(GROUP, self.consumer, {STREAM: ">"}, count=1, block=5000)
@@ -155,15 +185,7 @@ class RedisStreamQueue(JobQueue):
                 semaphore.release()
                 continue
             for _stream, entries in result:
-                for entry_id, fields in entries:
-                    async def run(eid: Any = entry_id, f: dict[Any, Any] = fields) -> None:
-                        try:
-                            await self._handle(eid, f)
-                        finally:
-                            semaphore.release()
-
-                    task = asyncio.create_task(run())
-                    running.add(task)
-                    task.add_done_callback(running.discard)
+                for entry_id, fields in entries:  # count=1: exactly one entry per acquired slot
+                    spawn(entry_id, fields, acquired=True)
         if running:
             await asyncio.gather(*running, return_exceptions=True)

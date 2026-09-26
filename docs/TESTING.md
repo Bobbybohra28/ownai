@@ -22,13 +22,15 @@ OpenAI-compatible model server** (`tests/fakes/fake_model_server.py`, a test dou
 export OWNAI_TEST_DATABASE_URL=postgresql+asyncpg://ownai:ownai@localhost:5432/ownai_test   # will be reset!
 export OWNAI_TEST_QDRANT_URL=http://localhost:6333
 export OWNAI_TEST_SANDBOX_URL=http://localhost:8090 OWNAI_TEST_SANDBOX_TOKEN=<token>        # optional
+export OWNAI_TEST_REDIS_URL=redis://localhost:6379/15                                       # optional (job queue)
 pytest tests/integration
 ```
 
 Covers: auth lifecycle (refresh rotation, errors), real model health (empty output ⇒ offline), project import →
 indexing → overview → hybrid RAG with citations, org isolation, `.env` protection, path traversal, the full chat
 flow over SSE, empty model output surfaced as an explicit error, pipeline diagnostics pinpointing the failing
-boundary, role permissions & audit, SQL read vs. write-with-approval, and (with the sandbox) the complete
+boundary, role permissions & audit, SQL read vs. write-with-approval, the Redis job queue (a long-running job is heartbeated and never executed twice; a crashed worker's job is
+re-delivered), and (with the sandbox) the complete
 **find bug → diagnose → stage fix → run tests with the change in the sandbox → approval → apply → re-test** flow.
 
 ## Frontend

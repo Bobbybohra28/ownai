@@ -21,7 +21,7 @@ Worker(s) ─ Orchestrator ─ Agents ─ Model Router ─ Providers ─► vLLM
 | Service | Code | Responsibility |
 |---|---|---|
 | `api` | `backend/app/main.py` | REST + SSE, auth, RBAC, enqueue jobs. Stateless. |
-| `worker` | `backend/app/worker.py` | Runs agent tasks, indexing, document processing, evaluations (Redis Streams consumer group, ack, re-delivery, dead-lettering). |
+| `worker` | `backend/app/worker.py` | Runs agent tasks, indexing, document processing, evaluations (Redis Streams consumer group, ack, heartbeats for long jobs, re-delivery from crashed workers, dead-lettering). |
 | `sandbox-runner` | `sandbox_runner/app/main.py` | The **only** component with container-runtime access. Executes code/tests/linters in throw-away containers. |
 | `postgres`, `redis`, `qdrant` | — | State. |
 | `web` | `frontend/` | Static React build behind nginx (SSE-friendly proxy). |
