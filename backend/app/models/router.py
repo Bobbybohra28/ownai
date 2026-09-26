@@ -248,6 +248,8 @@ class ModelRouter:
     # ---- execution --------------------------------------------------------------------------
     async def _record(self, event: UsageEvent) -> None:
         self._stats.setdefault(event.model_id, _Stats()).record(event.success, event.latency_ms)
+        if event.success:
+            self.health.record_success(event.model_id)
         if self.usage_sink:
             try:
                 await self.usage_sink(event)

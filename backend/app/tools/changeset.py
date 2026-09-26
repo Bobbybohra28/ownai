@@ -290,10 +290,12 @@ class EditFileTool(Tool):
                 path = recovered
         async with ctx.services.sessions() as session:
             cs = await ctx.services.changesets.for_run(session, org_id=ctx.org_id, project_id=project.id,
-                                                       run_id=ctx.run_id)
-            assert cs is not None
-            current = await ctx.services.changesets.current_content(session, cs, project.jail, path)
-            await session.commit()
+                                                       run_id=ctx.run_id, create=False)
+            if cs is not None:
+                current = await ctx.services.changesets.current_content(session, cs, project.jail, path)
+            else:
+                target = project.jail.resolve(path)
+                current = target.read_text(encoding="utf-8", errors="replace") if target.is_file() else None
         if current is None:
             return ToolOutcome(status="error", summary=f"File '{args.path}' does not exist.", error_code="NOT_FOUND")
         count = current.count(args.find) if args.find else 0

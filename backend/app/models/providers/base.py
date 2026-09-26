@@ -159,6 +159,7 @@ class HealthReport(BaseModel):
     model_id: str
     status: HealthStatus
     checked_at: str
+    functional_checked_at: str | None = None  # last time a real completion/embedding was verified
     latency_ms: int | None = None
     error_code: str | None = None
     error: str | None = None

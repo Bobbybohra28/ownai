@@ -69,7 +69,9 @@ def estimate_complexity(text: str) -> str:
     score += 2 if words > 120 else 1 if words > 40 else 0
     score += 1 if len(re.findall(r"\b(and then|also|additionally|after that|then)\b", lowered)) >= 2 else 0
     score += 1 if re.search(r"\b(entire|whole|all (files|modules)|across the (project|codebase)|end[- ]to[- ]end)\b", lowered) else 0
-    score += 1 if re.search(r"\b(architecture|design|migrate|refactor|security|performance|scal\w+|concurren\w+)\b", lowered) else 0
+    heavy = set(re.findall(r"\b(architecture|design|migrat\w*|refactor\w*|security|performance|scal\w+|concurren\w+)\b",
+                           lowered))
+    score += min(2, len(heavy))
     score += 1 if lowered.count("?") > 2 or lowered.count("\n") > 8 else 0
     return "complex" if score >= 3 else "moderate" if score >= 1 else "simple"
 

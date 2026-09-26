@@ -103,17 +103,60 @@ class ModelHealthService:
         self._locks: dict[str, asyncio.Lock] = {}
         self._task: asyncio.Task[None] | None = None
         self.on_report: list[Any] = []  # callbacks(report) e.g. persist to DB
+        self.functional_interval_s = 600
+        self._last_success: dict[str, str] = {}
 
     # ---- probing ----------------------------------------------------------------------------
-    async def check(self, model_id: str, *, deep: bool = False) -> HealthReport:
+    async def check(self, model_id: str, *, deep: bool = False, light: bool = False) -> HealthReport:
+        """Probe a model. ``light`` skips the generation probe while a recent functional check exists."""
         config = self.registry.get(model_id)
         if config is None:
             raise AppError(f"Unknown model '{model_id}'.", code=ErrorCode.NOT_FOUND)
         lock = self._locks.setdefault(model_id, asyncio.Lock())
         async with lock:
-            report = await self._probe(config, deep=deep)
+            previous = await self.store.get(model_id)
+            if light and not deep and previous is not None and self._functional_recent(previous):
+                report = await self._light_probe(config, previous)
+            else:
+                report = await self._probe(config, deep=deep)
+                if report.status in (HealthStatus.ONLINE, HealthStatus.DEGRADED):
+                    report.functional_checked_at = report.checked_at
         await self._save(report)
         return report
+
+    def _functional_recent(self, report: HealthReport) -> bool:
+        if report.status not in (HealthStatus.ONLINE, HealthStatus.DEGRADED):
+            return False
+        stamp = self._last_success.get(report.model_id) or report.functional_checked_at
+        if not stamp:
+            return False
+        try:
+            age = (datetime.now(UTC) - datetime.fromisoformat(stamp)).total_seconds()
+        except ValueError:
+            return False
+        return age < self.functional_interval_s
+
+    async def _light_probe(self, config: ModelConfig, previous: HealthReport) -> HealthReport:
+        """Reachability + model-name check only; keeps the last verified functional result."""
+        provider = self.providers[config.id]
+        started = time.perf_counter()
+        try:
+            available = await provider.list_models()
+        except ModelError as exc:
+            return HealthReport(model_id=config.id, status=HealthStatus.OFFLINE, checked_at=_now_iso(),
+                                error_code=str(exc.code), error=exc.message,
+                                steps=[HealthCheckStep(name="list_models", ok=False, code=str(exc.code),
+                                                       message=exc.message, latency_ms=_ms(started))])
+        if not provider.name_matches(available):
+            message = f"The endpoint no longer serves '{config.model}'."
+            return HealthReport(model_id=config.id, status=HealthStatus.OFFLINE, checked_at=_now_iso(),
+                                error_code=str(ErrorCode.MODEL_WRONG_NAME), error=message, available_models=available,
+                                steps=[HealthCheckStep(name="model_name", ok=False, message=message)])
+        return previous.model_copy(update={"checked_at": _now_iso(), "available_models": available})
+
+    def record_success(self, model_id: str) -> None:
+        """A real request succeeded — counts as a functional health check."""
+        self._last_success[model_id] = _now_iso()
 
     async def _probe(self, config: ModelConfig, *, deep: bool) -> HealthReport:
         if not config.enabled:
@@ -215,9 +258,9 @@ class ModelHealthService:
         log.info("model_health.checked", model_id=report.model_id, status=report.status,
                  error_code=report.error_code, latency_ms=report.latency_ms)
 
-    async def check_all(self, *, deep: bool = False) -> list[HealthReport]:
+    async def check_all(self, *, deep: bool = False, light: bool = False) -> list[HealthReport]:
         configs = self.registry.all()
-        return list(await asyncio.gather(*(self.check(c.id, deep=deep) for c in configs)))
+        return list(await asyncio.gather(*(self.check(c.id, deep=deep, light=light) for c in configs)))
 
     # ---- state ------------------------------------------------------------------------------
     async def get(self, model_id: str) -> HealthReport | None:
@@ -228,7 +271,9 @@ class ModelHealthService:
             checked = datetime.fromisoformat(report.checked_at)
         except ValueError:
             return False
-        return (datetime.now(UTC) - checked).total_seconds() < self.ttl_s
+        # failed models are re-probed sooner so recovery is detected quickly
+        ttl = self.ttl_s if report.status in (HealthStatus.ONLINE, HealthStatus.DEGRADED) else min(self.ttl_s, 15)
+        return (datetime.now(UTC) - checked).total_seconds() < ttl
 
     async def ensure_checked(self, model_id: str) -> HealthReport:
         """Return a fresh report, probing the model if the stored one is missing or stale."""
@@ -267,7 +312,7 @@ class ModelHealthService:
     async def _loop(self, interval_s: int) -> None:
         while True:
             try:
-                await self.check_all()
+                await self.check_all(light=True)
             except Exception as exc:
                 log.error("model_health.loop_error", error=str(exc))
             await asyncio.sleep(interval_s)

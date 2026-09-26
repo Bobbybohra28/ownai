@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     embedding_dimensions: int | None = None
 
     # --- model runtime ---------------------------------------------------------------------
-    model_health_interval_s: int = 30
+    model_health_interval_s: int = 60
     model_health_ttl_s: int = 300
     model_request_timeout_s: float = 180.0
 
@@ -98,10 +98,21 @@ class Settings(BaseSettings):
     max_plan_steps: int = 12
     max_run_seconds: int = 1800
     max_fix_iterations: int = 2
+    # Multiplies every agent's timeout_s (e.g. 3.0 for CPU-only model serving).
+    agent_timeout_scale: float = 1.0
 
     # --- billing ---------------------------------------------------------------------------
     billing_enabled: bool = False
     default_plan: str = "private"
+
+    @field_validator("models_config_path", "agents_config_dir", "plans_config_path", "projects_root", mode="after")
+    @classmethod
+    def _resolve_relative(cls, value: Path | None) -> Path | None:
+        """Relative paths work from both the repository root and backend/."""
+        if value is None or value.is_absolute() or value.exists():
+            return value
+        candidate = REPO_ROOT / value
+        return candidate if candidate.exists() or not value.parts or value.parts[0] in {"config", "data"} else value
 
     @field_validator("cors_origins", "local_import_roots", mode="before")
     @classmethod

@@ -15,7 +15,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field, ValidationError
 
-from app.core.config import Settings
+from app.core.config import REPO_ROOT, Settings
 from app.core.exceptions import ConfigurationError
 from app.core.logging import get_logger
 from app.models.providers.base import CHAT_ROLES, ModelCapabilities, ModelConfig, ModelRole
@@ -29,6 +29,30 @@ class _Unresolved(str):
     """Marker for values referencing unset environment variables."""
 
 
+def read_dotenv(paths: list[Path]) -> dict[str, str]:
+    """Minimal .env reader so ${VARS} in models.yaml work even when .env is not exported to the shell
+    (e.g. on Windows). Real environment variables always win."""
+    values: dict[str, str] = {}
+    for path in paths:
+        if not path.is_file():
+            continue
+        for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, raw = line.removeprefix("export ").partition("=")
+            raw = raw.strip()
+            if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in "\"'":
+                raw = raw[1:-1]
+            elif " #" in raw:
+                raw = raw.split(" #", 1)[0].rstrip()
+            values.setdefault(key.strip(), raw)
+    return values
+
+
+_DOTENV: dict[str, str] = {}
+
+
 def interpolate(value: Any, missing: set[str]) -> Any:
     if isinstance(value, dict):
         return {k: interpolate(v, missing) for k, v in value.items()}
@@ -39,7 +63,7 @@ def interpolate(value: Any, missing: set[str]) -> Any:
 
     def repl(match: re.Match[str]) -> str:
         name, default = match.group(1), match.group(2)
-        env = os.environ.get(name)
+        env = os.environ.get(name) or _DOTENV.get(name)
         if env not in (None, ""):
             return env
         if default is not None:
@@ -88,6 +112,8 @@ class ModelRegistry:
     # ---- loading ----------------------------------------------------------------------------
     @classmethod
     def from_settings(cls, settings: Settings) -> ModelRegistry:
+        _DOTENV.clear()
+        _DOTENV.update(read_dotenv([Path(".env"), REPO_ROOT / ".env"]))
         path = settings.models_config_path
         if path:
             return cls.from_yaml(Path(path), default_timeout=settings.model_request_timeout_s)

@@ -30,8 +30,12 @@ async def run_git(root: Path, *args: str, timeout: int = 30, check: bool = True)
     env.update({"GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_OPTIONAL_LOCKS": "0",
                 "GIT_AUTHOR_NAME": env.get("GIT_AUTHOR_NAME", "OwnAI"), "GIT_COMMITTER_NAME": "OwnAI",
                 "GIT_AUTHOR_EMAIL": "ownai@localhost", "GIT_COMMITTER_EMAIL": "ownai@localhost"})
-    proc = await asyncio.create_subprocess_exec("git", *_SAFE_CONFIG, *args, cwd=root, env=env,
-                                                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        proc = await asyncio.create_subprocess_exec("git", *_SAFE_CONFIG, *args, cwd=root, env=env,
+                                                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    except FileNotFoundError as exc:
+        raise ToolError("Git is not installed on the OwnAI server, so Git features are unavailable.",
+                        code=ErrorCode.GIT_ERROR) from exc
     try:
         out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
     except TimeoutError as exc:

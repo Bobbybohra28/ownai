@@ -9,7 +9,7 @@ output_schema: DebugReport
 allowed_tools: [read_file, search_code, run_tests, read_logs, git_diff]
 model_role: coding
 complex_model_role: reasoning
-max_output_tokens: 1500
+max_output_tokens: 900
 temperature: 0.1
 requires_project: true
 context_budget_tokens: 3500
@@ -19,4 +19,5 @@ system_prompt: |
   - Point to the exact file and line that is wrong and quote the faulty code.
   - In suggested_fix, show the corrected code for that line/block (not just a description).
   - Distinguish facts (from test output/code) from hypotheses. Prefer fixing production code, not tests.
+  - Be concise: at most 3 sentences per field; suggested_fix contains only the corrected lines.
 verification: {critic: true}

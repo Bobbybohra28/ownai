@@ -1,0 +1,62 @@
+# GPU model serving with vLLM (NVIDIA). Requires the NVIDIA Container Toolkit.
+# Model names come from .env — nothing is hard-coded:
+#   CODING_MODEL_NAME=Qwen/Qwen2.5-Coder-7B-Instruct
+#   FAST_MODEL_NAME=Qwen/Qwen2.5-3B-Instruct
+#   EMBEDDING_MODEL_NAME=nomic-ai/nomic-embed-text-v1.5   EMBEDDING_DIMENSIONS=768
+# and config/models.yaml (copy of config/models.example.yaml) points at these services:
+#   CODING_MODEL_URL=http://vllm-coding:8000/v1  FAST_MODEL_URL=http://vllm-fast:8000/v1
+#   EMBEDDING_MODEL_URL=http://vllm-embedding:8000/v1
+# Usage: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.gpu.yml --env-file .env up -d
+
+x-vllm: &vllm
+  image: vllm/vllm-openai:${VLLM_VERSION:-latest}
+  ipc: host
+  volumes:
+    - hf-cache:/root/.cache/huggingface
+  environment:
+    HF_TOKEN: ${HF_TOKEN:-}
+    HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-0}
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+  restart: unless-stopped
+
+services:
+  vllm-coding:
+    <<: *vllm
+    command: >
+      --model ${CODING_MODEL_NAME:?set CODING_MODEL_NAME}
+      --served-model-name ${CODING_MODEL_NAME}
+      --max-model-len ${CODING_MODEL_CONTEXT:-32768}
+      --gpu-memory-utilization ${CODING_GPU_UTIL:-0.55}
+      --enable-auto-tool-choice --tool-call-parser ${CODING_TOOL_PARSER:-hermes}
+      --enable-prefix-caching
+
+  vllm-fast:
+    <<: *vllm
+    profiles: ["fast"]
+    command: >
+      --model ${FAST_MODEL_NAME:?set FAST_MODEL_NAME}
+      --served-model-name ${FAST_MODEL_NAME}
+      --max-model-len ${FAST_MODEL_CONTEXT:-16384}
+      --gpu-memory-utilization ${FAST_GPU_UTIL:-0.20}
+
+  vllm-embedding:
+    <<: *vllm
+    command: >
+      --model ${EMBEDDING_MODEL_NAME:?set EMBEDDING_MODEL_NAME}
+      --served-model-name ${EMBEDDING_MODEL_NAME}
+      --task embed --trust-remote-code
+      --gpu-memory-utilization ${EMBEDDING_GPU_UTIL:-0.10}
+
+  api:
+    depends_on: [vllm-coding, vllm-embedding]
+  worker:
+    depends_on: [vllm-coding, vllm-embedding]
+
+volumes:
+  hf-cache:

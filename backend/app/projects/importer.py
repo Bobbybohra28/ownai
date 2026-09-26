@@ -150,8 +150,12 @@ async def git_clone(url: str, destination: Path, *, branch: str | None = None, t
         args += ["--branch", branch]
     args += ["--", url, str(destination)]
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_ASKPASS": "/bin/false"}
-    proc = await asyncio.create_subprocess_exec(*args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-                                                env=env)
+    try:
+        proc = await asyncio.create_subprocess_exec(*args, stdout=asyncio.subprocess.PIPE,
+                                                    stderr=asyncio.subprocess.PIPE, env=env)
+    except FileNotFoundError as exc:
+        raise ValidationFailed("Git is not installed on the OwnAI server; import a .zip instead.",
+                               code=ErrorCode.IMPORT_FAILED) from exc
     try:
         _, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
     except TimeoutError as exc:

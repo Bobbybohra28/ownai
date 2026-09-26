@@ -35,7 +35,7 @@ def _requirements(path: Path, rel: str) -> list[Dependency]:
     deps: list[Dependency] = []
     for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
         line = line.strip()
-        if not line or line.startswith(("#", "-", "git+", "http")):
+        if not line or line.startswith(("#", "-", "git+", "http://", "https://")):
             continue
         m = _REQ_LINE.match(line)
         if m:

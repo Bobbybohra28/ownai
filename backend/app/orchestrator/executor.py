@@ -222,6 +222,9 @@ class Orchestrator:
                 result={"error": {"code": str(code), "message": message, "hint": hint}}))
             await session.execute(update(Task).where(Task.id == task.id).values(
                 status=TaskStatus.FAILED.value, finished_at=utcnow()))
+            # proposed-but-unreviewable changes of a failed run are discarded (never applied)
+            await session.execute(update(ChangeSet).where(ChangeSet.run_id == run_id, ChangeSet.status == "open")
+                                  .values(status="discarded"))
             if task.conversation_id:
                 session.add(Message(organization_id=task.organization_id, conversation_id=task.conversation_id,
                                     role="assistant", content=text, run_id=run_id, created_at=utcnow(),
@@ -339,11 +342,13 @@ class Orchestrator:
         await ctx.status(STATUS_BY_AGENT.get(step.agent, f"Running {agent.spec.name}…"))
         await ctx.emit("step_started", step=step.id, agent=step.agent, agent_name=agent.spec.name, goal=step.goal)
         await self._record_step(ctx.run_id, step, None, status="running")  # type: ignore[arg-type]
+        timeout = agent.spec.timeout_s * self.d.settings.agent_timeout_scale
         try:
-            result = await asyncio.wait_for(agent.run(agent_task, ctx), timeout=agent.spec.timeout_s)
+            result = await asyncio.wait_for(agent.run(agent_task, ctx), timeout=timeout)
         except TimeoutError:
             result = AgentResult(agent_id=step.agent, status="failed", error_code=str(ErrorCode.AGENT_FAILED),
-                                 error_message=f"{agent.spec.name} did not finish within {agent.spec.timeout_s}s.")
+                                 error_message=f"{agent.spec.name} did not finish within {timeout:.0f}s "
+                                               "(slow model server? see OWNAI_AGENT_TIMEOUT_SCALE).")
         # generate → test → fix loop for code changes
         if result.status == "succeeded" and step.produces_changes and result.changeset_id:
             result = await self._verify_changes(step, agent_task, result, policy, ctx, state)

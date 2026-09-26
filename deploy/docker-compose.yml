@@ -1,0 +1,118 @@
+# OwnAI — complete private stack (single machine).
+#   cp .env.example .env   # set OWNAI_SECRET_KEY, OWNAI_ENCRYPTION_KEY, SANDBOX_TOKEN, model settings
+#   docker compose -f deploy/docker-compose.yml --env-file .env build
+#   docker compose -f deploy/docker-compose.yml --env-file .env up -d
+# Add GPU model serving:   -f deploy/docker-compose.gpu.yml
+# Or Ollama on the host:   -f deploy/docker-compose.ollama.yml
+name: ownai
+
+x-backend: &backend
+  build:
+    context: ..
+    dockerfile: backend/Dockerfile
+  image: ownai/backend:local
+  env_file: ../.env
+  environment:
+    OWNAI_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ownai}:${POSTGRES_PASSWORD:-ownai}@postgres:5432/${POSTGRES_DB:-ownai}
+    OWNAI_REDIS_URL: redis://redis:6379/0
+    OWNAI_QDRANT_URL: http://qdrant:6333
+    OWNAI_SANDBOX_URL: http://sandbox-runner:8090
+    OWNAI_SANDBOX_TOKEN: ${SANDBOX_TOKEN:?set SANDBOX_TOKEN in .env}
+    OWNAI_EXECUTION_MODE: worker
+    OWNAI_MODELS_CONFIG_PATH: ${OWNAI_MODELS_CONFIG_PATH_IN_CONTAINER:-/srv/config/models.yaml}
+    OWNAI_PROJECTS_ROOT: /srv/data/projects
+  volumes:
+    - projects:/srv/data/projects
+    - ../config:/srv/config:ro
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ownai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ownai}
+      POSTGRES_DB: ${POSTGRES_DB:-ownai}
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ownai}"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    volumes: [qdrant:/qdrant/storage]
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    <<: *backend
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      qdrant: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      retries: 10
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  sandbox-runner:
+    build:
+      context: ../sandbox_runner
+    image: ownai/sandbox-runner:local
+    environment:
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?set SANDBOX_TOKEN in .env}
+      SANDBOX_ENV: production
+      # SANDBOX_RUNTIME: runsc   # enable gVisor if installed on the host
+    volumes:
+      # The runner is the ONLY service with container-runtime access.
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  # Build-only: the image used for sandboxed Python execution.
+  sandbox-python:
+    build:
+      context: ../sandbox_runner/images/python
+    image: ownai/sandbox-python:3.12
+    profiles: ["build"]
+    command: ["python", "--version"]
+
+  web:
+    build:
+      context: ../frontend
+    image: ownai/web:local
+    ports: ["${OWNAI_WEB_PORT:-8080}:8080"]
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  postgres:
+  redis:
+  qdrant:
+  projects:

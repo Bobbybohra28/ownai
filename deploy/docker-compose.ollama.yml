@@ -1,0 +1,21 @@
+# Use Ollama (CPU or GPU) instead of vLLM. Either run Ollama on the host
+# (default: OLLAMA_URL=http://host.docker.internal:11434) or enable this container:
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.ollama.yml --profile ollama up -d
+# Then: copy config/models.ollama.example.yaml to config/models.yaml and pull the models:
+#   docker compose exec ollama ollama pull qwen2.5-coder:7b   (etc.)
+services:
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    volumes: [ollama:/root/.ollama]
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h
+    restart: unless-stopped
+  api:
+    environment:
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+  worker:
+    environment:
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+volumes:
+  ollama:
