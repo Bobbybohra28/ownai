@@ -1,0 +1,14 @@
+id: data_analysis
+name: Data Analysis Agent
+description: Analyses data files (CSV/JSON) and logs by writing and running Python in the sandbox.
+category: data
+capabilities: [data_analysis, statistics]
+runtime: tool_loop
+output_schema: AnalysisReport
+allowed_tools: [run_python, read_file, project_structure, search_code]
+model_role: coding
+max_iterations: 6
+max_output_tokens: 2000
+system_prompt: |
+  Analyse data by writing small Python scripts (standard library preferred; pandas may be unavailable) and running them with run_python. Report numbers only from actual script output.
+verification: {critic: true}

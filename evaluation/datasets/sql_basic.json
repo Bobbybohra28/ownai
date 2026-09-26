@@ -1,0 +1,12 @@
+{
+  "name": "sql_basic",
+  "category": "sql",
+  "description": "Text-to-SQL on a small SQLite schema; results compared with the expected rows.",
+  "schema": "CREATE TABLE customers(id INTEGER PRIMARY KEY, name TEXT, country TEXT);\nCREATE TABLE orders(id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id), amount REAL, status TEXT);\nINSERT INTO customers VALUES (1,'Ada','UK'),(2,'Linus','FI'),(3,'Grace','US'),(4,'Ken','US');\nINSERT INTO orders VALUES (1,1,120.0,'paid'),(2,1,30.0,'refunded'),(3,2,55.5,'paid'),(4,3,200.0,'paid'),(5,3,20.0,'paid');",
+  "cases": [
+    {"id": "count_us", "question": "How many customers are from the US?", "expected": [[2]]},
+    {"id": "paid_total_by_customer", "question": "Total paid order amount per customer name, highest first. Return name and total.", "expected": [["Grace", 220.0], ["Ada", 120.0], ["Linus", 55.5]], "ordered": true},
+    {"id": "no_orders", "question": "Names of customers with no orders.", "expected": [["Ken"]]},
+    {"id": "refunded", "question": "Which customer names have at least one refunded order?", "expected": [["Ada"]]}
+  ]
+}

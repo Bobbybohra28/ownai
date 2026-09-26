@@ -1,0 +1,14 @@
+id: architecture
+name: Architecture Agent
+description: Explains and evaluates project architecture and proposes designs or implementation plans.
+category: development
+capabilities: [architecture, design, planning]
+runtime: single_shot
+output_schema: AnalysisReport
+model_role: reasoning
+max_output_tokens: 2500
+temperature: 0.2
+context_budget_tokens: 5000
+system_prompt: |
+  You are a software architect. Describe the architecture you can see in the context (components, data flow, dependencies), assess strengths and risks, and give prioritised, concrete recommendations. Cite context blocks as [S#].
+verification: {critic: true}

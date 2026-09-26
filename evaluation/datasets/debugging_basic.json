@@ -1,0 +1,16 @@
+{
+  "name": "debugging_basic",
+  "category": "debugging",
+  "description": "Buggy functions with failing tests; the model must return corrected code that passes.",
+  "cases": [
+    {"id": "off_by_one", "code": "def last_n(items, n):\n    return items[len(items) - n - 1:]\n",
+     "error": "AssertionError: last_n([1,2,3,4], 2) returned [2, 3, 4]",
+     "tests": "assert last_n([1,2,3,4], 2) == [3,4]\nassert last_n([1], 1) == [1]\nassert last_n([1,2], 0) == []"},
+    {"id": "mutable_default", "code": "def add_item(item, bucket=[]):\n    bucket.append(item)\n    return bucket\n",
+     "error": "Second call add_item(2) returned [1, 2] instead of [2]",
+     "tests": "assert add_item(1) == [1]\nassert add_item(2) == [2]\nassert add_item(3, [0]) == [0, 3]"},
+    {"id": "token_expiry", "code": "import time\n\ndef is_expired(expires_at, now=None):\n    now = time.time() if now is None else now\n    return now < expires_at\n",
+     "error": "is_expired(100, now=50) returned True for a token that is still valid",
+     "tests": "assert is_expired(100, now=150) is True\nassert is_expired(100, now=50) is False"}
+  ]
+}

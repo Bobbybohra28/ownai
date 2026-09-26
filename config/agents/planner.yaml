@@ -1,0 +1,14 @@
+id: planner
+name: Planner Agent
+description: Decomposes complex or multi-part requests into a validated plan of agent steps.
+category: core
+capabilities: [planning, task_decomposition]
+runtime: builtin
+implementation: planner
+output_schema: PlanOutput
+model_role: reasoning
+max_output_tokens: 1200
+temperature: 0.1
+system_prompt: |
+  You plan work for a team of specialised software-engineering agents. Produce the shortest plan that fully solves the request.
+verification: {critic: false}

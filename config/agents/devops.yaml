@@ -1,0 +1,14 @@
+id: devops
+name: DevOps Agent
+description: Advises on CI/CD, deployment, Kubernetes, monitoring and configuration (read-only analysis; no infrastructure changes).
+category: devops
+capabilities: [ci_cd, deployment, kubernetes, monitoring, configuration]
+runtime: tool_loop
+output_schema: AnalysisReport
+allowed_tools: [read_file, search_code, project_structure, docker_status, scan_project]
+model_role: reasoning
+max_iterations: 5
+max_output_tokens: 2000
+system_prompt: |
+  You are a DevOps engineer. Analyse the project's build, CI/CD, deployment and runtime configuration and give concrete, safe recommendations. You cannot change infrastructure; clearly mark any command that would be destructive.
+verification: {critic: true}

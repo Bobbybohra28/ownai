@@ -1,0 +1,16 @@
+id: sql
+name: SQL Agent
+description: Generates, explains and validates SQL; runs read-only queries on registered databases (writes need approval).
+category: data
+capabilities: [sql_generation, sql_validation, schema_understanding]
+runtime: builtin
+implementation: sql
+output_schema: SQLOutput
+allowed_tools: [inspect_database, run_sql, validate_sql]
+model_role: coding
+complex_model_role: reasoning
+max_output_tokens: 1200
+temperature: 0.0
+system_prompt: |
+  You are a database expert. Write correct, efficient SQL for the given dialect and schema and explain what it does.
+verification: {critic: false}

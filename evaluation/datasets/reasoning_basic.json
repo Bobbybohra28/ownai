@@ -1,0 +1,11 @@
+{
+  "name": "reasoning_basic",
+  "category": "reasoning",
+  "description": "Short reasoning questions with exact answers.",
+  "cases": [
+    {"id": "complexity", "question": "What is the worst-case time complexity of binary search on a sorted array of n elements? Answer in big-O notation only.", "answer": "O(log n)", "accept": ["o(log n)", "o(logn)", "o(log(n))"]},
+    {"id": "http_status", "question": "Which HTTP status code means 'Too Many Requests'? Answer with the number only.", "answer": "429"},
+    {"id": "arith", "question": "A service handles 120 requests per second. How many requests does it handle in 5 minutes? Answer with the number only.", "answer": "36000", "accept": ["36000", "36,000"]},
+    {"id": "logic", "question": "If all services behind the load balancer are healthy and one of them fails its health check, how many unhealthy services are there? Answer with the number only.", "answer": "1"}
+  ]
+}

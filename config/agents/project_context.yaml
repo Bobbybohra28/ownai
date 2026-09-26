@@ -1,0 +1,11 @@
+id: project_context
+name: Project Context Agent
+description: Retrieves the relevant files, symbols and documentation from the indexed project (hybrid semantic + keyword search) with citations.
+category: core
+capabilities: [retrieval, rag, project_understanding]
+runtime: builtin
+implementation: project_context
+model_role: fast
+context_budget_tokens: 3500
+requires_project: true
+verification: {critic: false}

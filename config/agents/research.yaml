@@ -1,0 +1,16 @@
+id: research
+name: Research Agent
+description: Searches project code and uploaded documentation to answer open-ended questions (documentation search).
+category: knowledge
+capabilities: [documentation_search, research]
+runtime: tool_loop
+output_schema: AnswerOutput
+allowed_tools: [semantic_search, search_code, read_file, project_structure]
+model_role: coding
+complex_model_role: reasoning
+max_iterations: 5
+max_output_tokens: 1800
+requires_project: true
+system_prompt: |
+  Research the question using the search tools, read the most relevant files, and answer with citations to files and lines.
+verification: {critic: true}

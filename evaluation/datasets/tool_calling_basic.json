@@ -1,0 +1,17 @@
+{
+  "name": "tool_calling_basic",
+  "category": "tool_calling",
+  "description": "Choose the right tool and arguments for an instruction.",
+  "tools": [
+    {"name": "read_file", "description": "Read a project file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "start_line": {"type": "integer"}}, "required": ["path"]}},
+    {"name": "search_code", "description": "Search project files for text", "parameters": {"type": "object", "properties": {"pattern": {"type": "string"}}, "required": ["pattern"]}},
+    {"name": "run_tests", "description": "Run the project's tests", "parameters": {"type": "object", "properties": {"paths": {"type": "array", "items": {"type": "string"}}}}},
+    {"name": "git_log", "description": "Show recent commits", "parameters": {"type": "object", "properties": {"limit": {"type": "integer"}}}}
+  ],
+  "cases": [
+    {"id": "read", "instruction": "Open the file src/app/main.py.", "expected_tool": "read_file", "expected_args": {"path": "src/app/main.py"}},
+    {"id": "search", "instruction": "Find where the string DATABASE_URL is used.", "expected_tool": "search_code", "expected_args": {"pattern": "DATABASE_URL"}},
+    {"id": "tests", "instruction": "Run the tests in tests/test_auth.py.", "expected_tool": "run_tests", "expected_args": {"paths": ["tests/test_auth.py"]}},
+    {"id": "log", "instruction": "Show me the last 5 commits.", "expected_tool": "git_log", "expected_args": {"limit": 5}}
+  ]
+}

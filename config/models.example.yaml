@@ -1,0 +1,84 @@
+# OwnAI model registry — vLLM (primary production target).
+#
+# Copy to config/models.yaml and point OWNAI_MODELS_CONFIG_PATH at it.
+# Every value can reference environment variables: ${VAR} or ${VAR:-default}.
+# A model whose endpoint/model resolves to empty is skipped with a warning
+# (so optional roles such as vision can stay unset).
+#
+# Roles: fast | coding | reasoning | vision | embedding | reranker
+# One model may serve several roles. If only one chat model exists it is used
+# for every chat role (the UI tells the user when a dedicated role is missing).
+
+models:
+  fast:
+    provider: vllm
+    endpoint: ${FAST_MODEL_URL:-http://localhost:8001/v1}
+    api_key: ${FAST_MODEL_API_KEY:-}
+    model: ${FAST_MODEL_NAME}
+    roles: [fast]
+    context_length: ${FAST_MODEL_CONTEXT:-32768}
+    max_output_tokens: 2048
+    priority: 50
+    capabilities:
+      supports_tools: true
+      supports_json_schema: true
+
+  coding:
+    provider: vllm
+    endpoint: ${CODING_MODEL_URL:-http://localhost:8002/v1}
+    api_key: ${CODING_MODEL_API_KEY:-}
+    model: ${CODING_MODEL_NAME}
+    roles: [coding]
+    context_length: ${CODING_MODEL_CONTEXT:-32768}
+    max_output_tokens: 4096
+    priority: 60
+    capabilities:
+      supports_tools: true
+      supports_json_schema: true
+
+  reasoning:
+    provider: vllm
+    endpoint: ${REASONING_MODEL_URL:-http://localhost:8003/v1}
+    api_key: ${REASONING_MODEL_API_KEY:-}
+    model: ${REASONING_MODEL_NAME}
+    roles: [reasoning]
+    context_length: ${REASONING_MODEL_CONTEXT:-32768}
+    max_output_tokens: 8192
+    # reasoning models spend tokens thinking before answering; give the probe room
+    health_probe_max_tokens: 1024
+    priority: 55
+    capabilities:
+      supports_tools: true
+      supports_reasoning: true
+
+  vision:
+    provider: vllm
+    endpoint: ${VISION_MODEL_URL:-}
+    model: ${VISION_MODEL_NAME:-}
+    roles: [vision]
+    context_length: 16384
+    capabilities:
+      supports_vision: true
+
+  embedding:
+    provider: vllm
+    endpoint: ${EMBEDDING_MODEL_URL:-http://localhost:8004/v1}
+    model: ${EMBEDDING_MODEL_NAME}
+    roles: [embedding]
+    # must match the model; changing it requires re-indexing
+    embedding_dimensions: ${EMBEDDING_DIMENSIONS}
+
+  reranker:
+    provider: vllm
+    endpoint: ${RERANKER_MODEL_URL:-}
+    model: ${RERANKER_MODEL_NAME:-}
+    roles: [reranker]
+
+routing:
+  # Optional explicit candidate order per role (model ids from above).
+  role_preferences:
+    coding: [coding, reasoning]
+    reasoning: [reasoning, coding]
+  allow_cross_role_fallback: true
+  prefer_reasoning_for_complex: true
+  critic_prefers_different_model: true

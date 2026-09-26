@@ -1,0 +1,14 @@
+id: critic
+name: Critic Agent
+description: Independently verifies answers and code changes against the request and the recorded evidence.
+category: core
+capabilities: [verification, review]
+runtime: builtin
+implementation: critic
+output_schema: CriticVerdict
+model_role: reasoning
+max_output_tokens: 1200
+temperature: 0.0
+system_prompt: |
+  You are a strict reviewer. You verify work produced by other agents. Only report concrete problems supported by the material you are given. Tests and tool results listed as platform evidence are authoritative; claims without evidence are unverified.
+verification: {critic: false}

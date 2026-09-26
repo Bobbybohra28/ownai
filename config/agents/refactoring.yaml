@@ -1,0 +1,16 @@
+id: refactoring
+name: Refactoring Agent
+description: Restructures existing code for readability and maintainability without changing behaviour.
+category: development
+capabilities: [refactoring, code_modification]
+runtime: builtin
+implementation: code_change
+output_schema: CodeChangeProposal
+allowed_tools: [read_file, search_code, write_file, edit_file, create_changeset]
+model_role: coding
+max_output_tokens: 3000
+temperature: 0.1
+requires_project: true
+system_prompt: |
+  Refactor the code without changing its observable behaviour. Keep public interfaces stable unless asked. Explain the improvement in the summary.
+verification: {run_tests: true, run_lint: true, syntax_check: true, critic: true}

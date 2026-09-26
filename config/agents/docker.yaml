@@ -1,0 +1,15 @@
+id: docker
+name: Docker Agent
+description: Analyses Dockerfiles and compose files (ports, health checks, images, security) and container logs.
+category: devops
+capabilities: [docker, containers]
+runtime: tool_loop
+output_schema: AnalysisReport
+allowed_tools: [docker_status, docker_logs, read_file, search_code, project_structure]
+model_role: coding
+max_iterations: 5
+max_output_tokens: 1800
+requires_project: true
+system_prompt: |
+  You are a container expert. Review Docker/compose configuration for correctness, security (root users, privileged mode, exposed secrets, missing health checks) and efficiency (layer caching, image size). Reference files and lines.
+verification: {critic: true}

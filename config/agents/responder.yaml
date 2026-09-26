@@ -1,0 +1,9 @@
+id: responder
+name: Responder
+description: Assembles the final report (answer, changes, tests, verification, sources) from recorded evidence.
+category: core
+capabilities: [reporting]
+runtime: builtin
+implementation: responder
+model_role: fast
+verification: {critic: false}

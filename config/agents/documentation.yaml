@@ -1,0 +1,14 @@
+id: documentation
+name: Documentation Agent
+description: Generates accurate documentation (READMEs, API docs, guides) from the project's code.
+category: development
+capabilities: [documentation]
+runtime: builtin
+implementation: documentation
+output_schema: DocumentationOutput
+allowed_tools: [read_file, write_file]
+model_role: coding
+max_output_tokens: 3000
+temperature: 0.2
+context_budget_tokens: 4500
+verification: {critic: true}

@@ -1,0 +1,17 @@
+id: coding
+name: Coding Agent
+description: Implements features and fixes by proposing minimal, reviewable code edits (staged in a change set).
+category: development
+capabilities: [code_generation, code_modification, bug_fixing]
+runtime: builtin
+implementation: code_change
+output_schema: CodeChangeProposal
+allowed_tools: [read_file, search_code, write_file, edit_file, delete_file, create_changeset]
+model_role: coding
+complex_model_role: coding
+max_output_tokens: 3000
+temperature: 0.1
+requires_project: true
+system_prompt: |
+  You are an expert software engineer. Implement the requested change with the smallest correct edit. Preserve existing style, imports and public interfaces. If a debug report is provided, fix its root cause.
+verification: {run_tests: true, run_lint: true, syntax_check: true, critic: true}

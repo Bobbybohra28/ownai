@@ -1,0 +1,17 @@
+{
+  "name": "coding_basic",
+  "category": "coding",
+  "description": "Small Python functions verified by executing assertions in the sandbox.",
+  "cases": [
+    {"id": "slugify", "prompt": "Write a Python function `slugify(text: str) -> str` that lowercases the text, replaces every run of non-alphanumeric characters with a single hyphen, and strips leading/trailing hyphens.",
+     "tests": "assert slugify('Hello World') == 'hello-world'\nassert slugify('  Already--slugged  ') == 'already-slugged'\nassert slugify('C++ & Python!') == 'c-python'\nassert slugify('') == ''"},
+    {"id": "fizzbuzz", "prompt": "Write a Python function `fizzbuzz(n: int) -> list[str]` returning the FizzBuzz sequence from 1 to n as strings ('Fizz' for multiples of 3, 'Buzz' for 5, 'FizzBuzz' for both).",
+     "tests": "assert fizzbuzz(5) == ['1','2','Fizz','4','Buzz']\nassert fizzbuzz(15)[-1] == 'FizzBuzz'\nassert fizzbuzz(0) == []"},
+    {"id": "merge_intervals", "prompt": "Write a Python function `merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]` that merges overlapping closed intervals and returns them sorted by start.",
+     "tests": "assert merge_intervals([(1,3),(2,6),(8,10),(15,18)]) == [(1,6),(8,10),(15,18)]\nassert merge_intervals([(1,4),(4,5)]) == [(1,5)]\nassert merge_intervals([]) == []\nassert merge_intervals([(5,7),(1,2)]) == [(1,2),(5,7)]"},
+    {"id": "is_palindrome", "prompt": "Write a Python function `is_palindrome(s: str) -> bool` that ignores case and non-alphanumeric characters.",
+     "tests": "assert is_palindrome('A man, a plan, a canal: Panama')\nassert not is_palindrome('race a car')\nassert is_palindrome('')"},
+    {"id": "word_count", "prompt": "Write a Python function `top_words(text: str, k: int) -> list[tuple[str, int]]` returning the k most frequent lowercase words (letters only) with counts, ties broken alphabetically.",
+     "tests": "assert top_words('b a a c b a', 2) == [('a',3),('b',2)]\nassert top_words('x y', 5) == [('x',1),('y',1)]\nassert top_words('', 3) == []"}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "rag_taskboard",
+  "category": "rag",
+  "description": "Retrieval accuracy on the TaskBoard fixture project (backend/tests/fixtures/sample_project). Select that project when running.",
+  "cases": [
+    {"id": "token_verify", "question": "How are access tokens verified?", "expected_files": ["taskboard/auth.py"], "keywords": ["signature", "expire"]},
+    {"id": "login_flow", "question": "What happens when a user logs in?", "expected_files": ["taskboard/users.py", "taskboard/api.py"], "keywords": ["token"]},
+    {"id": "config", "question": "Where does the secret key come from?", "expected_files": ["taskboard/config.py"], "keywords": ["environment"]},
+    {"id": "me_endpoint", "question": "How does the /me handler find the current user?", "expected_files": ["taskboard/api.py"], "keywords": ["bearer"]}
+  ]
+}

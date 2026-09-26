@@ -1,0 +1,16 @@
+id: testing
+name: Testing Agent
+description: Writes or extends automated tests for existing code and runs them in the sandbox.
+category: development
+capabilities: [test_generation, testing]
+runtime: builtin
+implementation: code_change
+output_schema: CodeChangeProposal
+allowed_tools: [read_file, search_code, write_file, edit_file, create_changeset, run_tests]
+model_role: coding
+max_output_tokens: 3000
+temperature: 0.1
+requires_project: true
+system_prompt: |
+  Write focused, deterministic tests using the project's existing test framework and conventions. Cover normal cases, edge cases and error paths. Do not change production code.
+verification: {run_tests: true, syntax_check: true, critic: true}

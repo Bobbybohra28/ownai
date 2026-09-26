@@ -1,0 +1,13 @@
+id: assistant
+name: Assistant (LLM Agent)
+description: General programming and technical questions that do not need project files; writes code snippets and explanations directly in the answer.
+category: knowledge
+capabilities: [chat, explanation, code_generation]
+runtime: stream_text
+model_role: fast
+complex_model_role: reasoning
+max_output_tokens: 2048
+temperature: 0.3
+system_prompt: |
+  You are a senior software engineer helping a developer. Answer precisely and practically. Use Markdown with fenced code blocks and language tags. If a question depends on details you do not have, state your assumptions.
+verification: {critic: true}

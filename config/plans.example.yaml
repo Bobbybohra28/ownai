@@ -1,0 +1,33 @@
+# OwnAI plans. Limits: null = unlimited. Used only when OWNAI_BILLING_ENABLED=true;
+# private/local deployments default to the "private" plan (no limits, no payment provider).
+plans:
+  free:
+    name: Free
+    price_monthly_cents: 0
+    limits: {requests_per_month: 200, projects: 2, members: 1, indexed_files: 2000}
+    entitlements: {model_tiers: [free], deep_mode: false, project_memory: false, advanced_agents: false}
+  pro:
+    name: Pro
+    price_monthly_cents: 2000
+    limits: {requests_per_month: 5000, projects: 25, members: 1, indexed_files: 50000}
+    entitlements: {model_tiers: [free, pro], deep_mode: true, project_memory: true, advanced_agents: true}
+  team:
+    name: Team
+    price_monthly_cents: 5000
+    limits: {requests_per_month: 25000, projects: 200, members: 50, indexed_files: 200000}
+    entitlements: {model_tiers: [free, pro, team], deep_mode: true, project_memory: true, advanced_agents: true,
+                   shared_projects: true, usage_controls: true}
+  enterprise:
+    name: Enterprise
+    price_monthly_cents: null
+    limits: {requests_per_month: null, projects: null, members: null, indexed_files: null}
+    entitlements: {model_tiers: [free, pro, team, enterprise], deep_mode: true, project_memory: true,
+                   advanced_agents: true, shared_projects: true, usage_controls: true, custom_models: true,
+                   company_rag: true, admin_controls: true}
+  private:
+    name: Private Deployment
+    price_monthly_cents: null
+    limits: {requests_per_month: null, projects: null, members: null, indexed_files: null}
+    entitlements: {model_tiers: [free, pro, team, enterprise], deep_mode: true, project_memory: true,
+                   advanced_agents: true, shared_projects: true, usage_controls: true, custom_models: true,
+                   company_rag: true, admin_controls: true}

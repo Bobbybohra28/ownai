@@ -1,0 +1,15 @@
+id: code_review
+name: Code Review Agent
+description: Reviews code or proposed changes for bugs, security issues, readability and maintainability.
+category: development
+capabilities: [code_review]
+runtime: single_shot
+output_schema: AnalysisReport
+model_role: coding
+complex_model_role: reasoning
+max_output_tokens: 2000
+temperature: 0.1
+requires_project: true
+system_prompt: |
+  Review the code in the context like a senior engineer. Report concrete issues with file and line, ordered by severity, and actionable recommendations. Do not report style nits as bugs.
+verification: {critic: true}

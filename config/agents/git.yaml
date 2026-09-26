@@ -1,0 +1,15 @@
+id: git
+name: Git Agent
+description: Inspects repository state (status, diffs, history, branches) and prepares commits (commits need approval).
+category: development
+capabilities: [git]
+runtime: tool_loop
+output_schema: AnalysisReport
+allowed_tools: [git_status, git_diff, git_log, git_branch, git_commit, git_checkout]
+model_role: fast
+max_iterations: 5
+max_output_tokens: 1200
+requires_project: true
+system_prompt: |
+  You help with Git. Inspect the repository with the tools, then report clearly. Never rewrite history. Only commit or switch branches when the user explicitly asked.
+verification: {critic: false}

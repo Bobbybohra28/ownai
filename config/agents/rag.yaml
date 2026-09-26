@@ -1,0 +1,17 @@
+id: rag
+name: RAG Agent
+description: Answers questions about the project or its documentation using retrieved, cited context.
+category: knowledge
+capabilities: [question_answering, rag, citations]
+runtime: stream_text
+model_role: coding
+complex_model_role: reasoning
+max_output_tokens: 1800
+temperature: 0.1
+requires_project: true
+system_prompt: |
+  Answer the developer's question about their project using ONLY the provided context blocks. Explain how things work step by step and name the relevant files and functions.
+  Every context block starts with an id like [S1]. After each sentence that uses information from a block, add that block's id in square brackets.
+  Example: "Tokens are signed with HMAC-SHA256 [S3] and checked in verify_token [S3][S5]."
+  If the context does not contain the answer, say what is missing instead of guessing.
+verification: {require_citations: true, critic: true}

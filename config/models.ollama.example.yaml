@@ -1,0 +1,40 @@
+# OwnAI model registry — Ollama (CPU/GPU laptop or workstation).
+#
+#   ollama pull qwen2.5-coder:7b
+#   ollama pull qwen2.5:3b
+#   ollama pull nomic-embed-text
+#
+# Then set OWNAI_MODELS_CONFIG_PATH=config/models.ollama.yaml (copy of this file)
+# and adjust the model names below or via the referenced environment variables.
+
+models:
+  fast:
+    provider: ollama
+    endpoint: ${OLLAMA_URL:-http://localhost:11434}
+    model: ${OLLAMA_FAST_MODEL:-qwen2.5:3b}
+    roles: [fast]
+    context_length: 8192
+    max_output_tokens: 1024
+    priority: 50
+    capabilities:
+      supports_tools: false
+      supports_json_schema: true
+
+  coding:
+    provider: ollama
+    endpoint: ${OLLAMA_URL:-http://localhost:11434}
+    model: ${OLLAMA_CODING_MODEL:-qwen2.5-coder:7b}
+    roles: [coding, reasoning]
+    context_length: 16384
+    max_output_tokens: 2048
+    priority: 60
+    capabilities:
+      supports_tools: false
+      supports_json_schema: true
+
+  embedding:
+    provider: ollama
+    endpoint: ${OLLAMA_URL:-http://localhost:11434}
+    model: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+    roles: [embedding]
+    embedding_dimensions: ${OLLAMA_EMBEDDING_DIMENSIONS:-768}

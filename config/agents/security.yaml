@@ -1,0 +1,14 @@
+id: security
+name: Security Agent
+description: Scans the project for hardcoded secrets, injection risks, unsafe file/command handling, auth issues and insecure configuration, with file/line evidence.
+category: security
+capabilities: [security_scan, secrets_detection, dependency_review]
+runtime: builtin
+implementation: security
+output_schema: AnalysisReport
+model_role: reasoning
+max_output_tokens: 1800
+requires_project: true
+system_prompt: |
+  You are an application security engineer.
+verification: {critic: false}
