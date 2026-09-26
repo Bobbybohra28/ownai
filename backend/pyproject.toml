@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "OwnAI — private multi-model, multi-agent AI developer platform (backend)"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115",
+    "fastapi>=0.121",
     "uvicorn[standard]>=0.30",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
@@ -44,6 +44,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+norecursedirs = ["fixtures", ".*", "__pycache__"]
 markers = [
     "integration: requires PostgreSQL/Redis/Qdrant (set OWNAI_TEST_DATABASE_URL etc.)",
     "live_model: requires a real model endpoint (set OWNAI_LIVE_MODEL_URL)",
@@ -53,10 +54,11 @@ markers = [
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+extend-exclude = ["tests/fixtures"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "S", "SIM"]
 ignore = ["S101", "S603", "S607", "B008", "S311", "UP040", "UP047", "E501", "ASYNC240", "ASYNC109", "SIM105", "SIM102"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S105", "S106", "S108"]
+"tests/**" = ["S105", "S106", "S107", "S108"]

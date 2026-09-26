@@ -37,7 +37,9 @@ async def get_session(container: ContainerDep) -> AsyncIterator[AsyncSession]:
             raise
 
 
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
+# scope="function": commit *before* the response is sent, so a client's next request sees the writes
+# (with the default request scope, "register → immediately call the API" could race the commit).
+SessionDep = Annotated[AsyncSession, Depends(get_session, scope="function")]
 
 
 @dataclass

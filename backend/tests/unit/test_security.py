@@ -2,7 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from app.core.exceptions import ErrorCode, PermissionDenied
+from app.core.exceptions import AuthenticationError, ErrorCode, PermissionDenied, ValidationFailed
+from app.database.models import OrgRole
 from app.security.commands import find_dangerous_patterns, validate_argv
 from app.security.crypto import SecretBox
 from app.security.passwords import hash_password, validate_password_strength, verify_password
@@ -17,7 +18,6 @@ from app.security.secrets import (
     redact_mapping,
 )
 from app.security.tokens import create_access_token, decode_access_token
-from app.database.models import OrgRole
 
 
 class TestSecrets:
@@ -119,7 +119,7 @@ class TestAuthPrimitives:
         hashed = hash_password("Sup3r-secret-pass")
         assert verify_password(hashed, "Sup3r-secret-pass")
         assert not verify_password(hashed, "wrong")
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationFailed):
             validate_password_strength("short")
 
     def test_jwt_roundtrip_and_tamper(self) -> None:
@@ -129,7 +129,7 @@ class TestAuthPrimitives:
         token, _ = create_access_token("k" * 40, user_id=uid, org_id=oid, ttl_minutes=5)
         claims = decode_access_token("k" * 40, token)
         assert claims.user_id == uid and claims.org_id == oid
-        with pytest.raises(Exception):
+        with pytest.raises(AuthenticationError):
             decode_access_token("x" * 40, token)
 
     def test_secret_box(self) -> None:

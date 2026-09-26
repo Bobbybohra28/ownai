@@ -484,9 +484,9 @@ class Orchestrator:
         approvals = await self._approvals_view(state.pending)
         text, report = await self._report(task, state, approval=approvals[0] if approvals else None)
         report["approvals"] = approvals
+        await self._post_message(task, run.id, text, report, state)
         await self._save(run.id, state, status=TaskStatus.AWAITING_APPROVAL.value, result=_jsonable(report))
         await self._set_task(task.id, status=TaskStatus.AWAITING_APPROVAL.value)
-        await self._post_message(task, run.id, text, report, state)
         await ctx.emit("answer", text=text, report=_jsonable(report))
         for approval in approvals:
             await ctx.emit("approval_required", approval_id=approval["id"], title=approval["title"],
@@ -522,10 +522,11 @@ class Orchestrator:
     async def _finish(self, run: TaskRun, task: Task, ctx: AgentContext, state: RunState) -> None:
         await ctx.status("Preparing the final answer…")
         text, report = await self._report(task, state, approval=None)
+        # Persist the answer before flipping the status: clients polling the run read the conversation next.
+        await self._post_message(task, run.id, text, report, state)
         await self._save(run.id, state, status=TaskStatus.SUCCEEDED.value, result=_jsonable(report),
                          finished_at=utcnow())
         await self._set_task(task.id, status=TaskStatus.SUCCEEDED.value, finished_at=utcnow())
-        await self._post_message(task, run.id, text, report, state)
         await ctx.emit("answer", text=text, report=_jsonable(report))
         await ctx.emit("run_finished", status=TaskStatus.SUCCEEDED.value)
         await self._remember(task, state)

@@ -32,14 +32,16 @@ async def structured_call(agent: BaseAgent, ctx: AgentContext, task: AgentTask, 
     schema = model.model_json_schema()
     attempt_messages = list(messages)
     last_error = ""
+    budget = max_tokens or agent.spec.max_output_tokens
     for attempt in range(2):
-        routed = await agent.call_model(ctx, attempt_messages, task, response_schema=schema, max_tokens=max_tokens,
+        routed = await agent.call_model(ctx, attempt_messages, task, response_schema=schema, max_tokens=budget,
                                         **req_overrides)
         result.model_ids.append(routed.decision.model_id)
         result.prompt_tokens += routed.response.usage.prompt_tokens
         result.completion_tokens += routed.response.usage.completion_tokens
         result.notices.extend(n for n in routed.decision.notices if n not in result.notices)
         raw = routed.response.content
+        truncated = routed.response.finish_reason == "length"
         data = extract_json_object(raw)
         if data is None:
             last_error = "The reply was not a JSON object."
@@ -48,13 +50,24 @@ async def structured_call(agent: BaseAgent, ctx: AgentContext, task: AgentTask, 
                 return model.model_validate(data)
             except ValidationError as exc:
                 last_error = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:6])
+        if truncated:  # a cut-off reply often parses to a nested fragment: report the real cause
+            last_error = f"The reply was cut off at the output token limit ({budget} tokens)."
         log.warning("agent.invalid_structured_output", agent=agent.id, attempt=attempt + 1, error=last_error,
                     model_id=routed.decision.model_id, finish_reason=routed.response.finish_reason,
                     raw_preview=raw[:600])
-        if attempt == 0:
+        if attempt == 0 and truncated:
+            # Truncated, not malformed: retry the same request with a larger budget instead of a repair prompt.
+            budget = min((budget or 1024) * 2, 8192)
+            attempt_messages = [*messages, ChatMessage(role="user", content="Keep every string field short. "
+                                                       + output_instructions(model))]
+        elif attempt == 0:
             attempt_messages = [*messages, ChatMessage(role="assistant", content=raw[:4000]),
                                 ChatMessage(role="user", content=f"That output was invalid ({last_error}). "
                                             f"{output_instructions(model)}")]
+    if truncated:
+        raise AgentError(f"The {agent.spec.name}'s reply was cut off at the output token limit ({budget} tokens); "
+                         "raise max_output_tokens for this agent or use a model that answers more concisely.",
+                         code=ErrorCode.AGENT_INVALID_OUTPUT, detail=last_error)
     raise AgentError(f"The {agent.spec.name} returned output in an invalid format.",
                      code=ErrorCode.AGENT_INVALID_OUTPUT, detail=last_error)
 

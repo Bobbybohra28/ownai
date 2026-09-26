@@ -19,7 +19,8 @@ if (-not (Test-Path ".env")) {
     $content = $content -replace '(?m)^OWNAI_ENCRYPTION_KEY=.*$', ("OWNAI_ENCRYPTION_KEY=" + (New-Secret 32))
     $content = $content -replace '(?m)^OWNAI_SANDBOX_TOKEN=.*$', ("OWNAI_SANDBOX_TOKEN=" + $sandbox)
     $content = $content -replace '(?m)^SANDBOX_TOKEN=.*$', ("SANDBOX_TOKEN=" + $sandbox)
-    Set-Content -Path ".env" -Value $content -NoNewline -Encoding UTF8
+    # UTF-8 without BOM (Windows PowerShell 5.1's "-Encoding UTF8" would add a BOM)
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location) ".env"), $content, (New-Object System.Text.UTF8Encoding $false))
     Write-Host "Created .env with new secrets."
 } else {
     Write-Host ".env already exists - left unchanged."
