@@ -54,7 +54,7 @@ async def structured_call(agent: BaseAgent, ctx: AgentContext, task: AgentTask, 
             last_error = f"The reply was cut off at the output token limit ({budget} tokens)."
         log.warning("agent.invalid_structured_output", agent=agent.id, attempt=attempt + 1, error=last_error,
                     model_id=routed.decision.model_id, finish_reason=routed.response.finish_reason,
-                    raw_preview=raw[:600])
+                    raw_preview=raw[:600], raw_tail=raw[-300:] if len(raw) > 600 else None)
         if attempt == 0 and truncated:
             # Truncated, not malformed: retry the same request with a larger budget instead of a repair prompt.
             budget = min((budget or 1024) * 2, 8192)
