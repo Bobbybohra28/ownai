@@ -50,10 +50,13 @@ async def service_health(container: ContainerDep) -> dict[str, Any]:
     sandbox = await container.sandbox.health()
     checks["sandbox"] = {"ok": sandbox.get("status") == "ok", **sandbox}
     reports = [await container.health.get(m.id) for m in container.registry.all()]
+    # same rule as the Models page: an old "online" result is not evidence the model is up now
+    online = sum(1 for r in reports if r is not None and r.status == "online" and container.health.is_fresh(r))
     checks["models"] = {
-        "ok": any(r is not None and r.status == "online" for r in reports),
+        "ok": online > 0,
         "configured": len(reports),
-        "online": sum(1 for r in reports if r is not None and r.status == "online"),
+        "online": online,
+        "stale": sum(1 for r in reports if r is not None and not container.health.is_fresh(r)),
         "unchecked": sum(1 for r in reports if r is None),
     }
     return checks
